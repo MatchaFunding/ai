@@ -8,4 +8,4 @@ class IdeaProcessed(BaseModel):
     Problema: str
     Publico: str
     Innovacion: str
-    Embedding: List[float] = Field(..., description="Vector numérico generado para matching")
+    Embedding: List[float]

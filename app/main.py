@@ -1,32 +1,37 @@
 from fastapi import FastAPI
 from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 
-from app.api import ideas
-from app.api import ia
+
+from app.api import ideas, ia, funds, match
+from app.services.embeddings_factory import get_embeddings_provider
+from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS
 from fastapi.middleware.cors import CORSMiddleware
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    
+    provider = get_embeddings_provider()
+    
+    probe = await provider.embed(["_dim_probe"])
+    vector_dim = len(probe[0])
 
+    ensure_collection(COL_IDEAS, vector_dim)
+    ensure_collection(COL_FUNDS, vector_dim)
 
+    #
+    app.state.provider = provider
+    app.state.vector_dim = vector_dim
 
+    yield
 
-app = FastAPI(title="IA Service", version="0.1.0")
+app = FastAPI(title="IA Service", version="0.1.0", lifespan=lifespan)
 API_PREFIX = "/api/v1"
 
-@app.get(f"{API_PREFIX}/health")
-def health():
-    return {
-        "status": "ok",
-        "time_utc": datetime.now(timezone.utc).isoformat(),
-        "version": app.version,
-        "service": app.title,
-    }
-
-
-# Aquí defines desde qué orígenes aceptarás peticiones
 origins = [
     "http://localhost:5173",  # tu frontend local
     "http://127.0.0.1:5173",
-    # puedes agregar más dominios aquí
+    
 ]
 
 app.add_middleware(
@@ -39,5 +44,30 @@ app.add_middleware(
 
 
 
+@app.get(f"{API_PREFIX}/health")
+def health():
+    return {
+        "status": "ok",
+        "time_utc": datetime.now(timezone.utc).isoformat(),
+        "version": app.version,
+        "service": app.title,
+    }
+
+# Routers
 app.include_router(ideas.router, prefix=API_PREFIX)
-app.include_router(ia.router, prefix="/api/v1")
+app.include_router(ia.router,    prefix=API_PREFIX)
+app.include_router(funds.router, prefix=API_PREFIX)
+app.include_router(match.router, prefix=API_PREFIX)
+
+
+
+from fastapi import FastAPI
+from datetime import datetime, timezone
+
+from app.api import ideas, ia, funds, match
+
+
+
+
+
+
