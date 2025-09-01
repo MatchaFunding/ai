@@ -35,7 +35,7 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
     ## Llamamos a Ollama
     paragraph = await llm_generate(prompt)
     if not paragraph:
-        # Si LLm falla dejamos todo tal cual
+        
         paragraph = f"{idea.Campo}. {idea.Problema}. {idea.Publico}. {idea.Innovacion}."
 
     
@@ -58,5 +58,5 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
     )
     upsert_points(COL_IDEAS, [point])
 
-    # 5) Respuesta: puedes mantener contrato actual (Idea) sin romper frontend
+    
     return IdeaRefinada(ID=idea.ID, Usuario=idea.Usuario, ResumenLLM=paragraph)
