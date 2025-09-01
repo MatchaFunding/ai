@@ -9,7 +9,7 @@ from tqdm import tqdm
 import requests
 import ollama
 
-
+router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 
 # Configuración de Ollama
@@ -23,7 +23,9 @@ REPEAT_PENALTY = 1.0
 TOP_K = 64
 TOP_P = 0.95
 
-
+class ResponseFormat(Enum):
+    JSON = "json_object"
+    TEXT = "text"
 
 def llamar_modelo_local(prompt):
     try:
@@ -47,35 +49,12 @@ def llamar_modelo_local(prompt):
     
 
 
-class ResponseFormat(Enum):
-    JSON = "json_object"
-    TEXT = "text"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 @router.post("/", response_model=Idea, summary="Crear/validar una Idea (echo)")
 def create_idea(idea: Idea) -> Idea:
 
+    ###print(idea)
 
-    print(idea)
-
-    """
-    Endpoint mínimo para validar contrato de entrada/salida con el modelo Idea.
-    Por ahora retorna un eco del payload (sirve para tests y para alinear frontend/backend).
-    """
     campo_idea = idea.Campo 
     descripcion_idea = idea.Problema 
     descripcion_publico = idea.Publico
@@ -88,8 +67,6 @@ def create_idea(idea: Idea) -> Idea:
     publico objetivo de la idea : {descripcion_publico}
     ventaja comparativa de la idea: {descripcion_diferenciador}
     """
-
-
 
     CODING_PROMPT = f"""
 
@@ -113,16 +90,7 @@ def create_idea(idea: Idea) -> Idea:
         return CODING_PROMPT.format(task=task)
 
 
-
     response = llamar_modelo_local(create_coding_prompt(task))
-    print(response)
-
-
-
-
-
-
-
-
+    ###print(response)
 
     return idea
