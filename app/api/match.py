@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from qdrant_client.models import PointStruct, Filter
 from app.services.qdrant_store import (
-    COL_IDEAS, COL_FUNDS, client, search_funds, build_filter, upsert_points, 
+    COL_IDEAS, COL_FUNDS, client, search_funds, build_filter, upsert_points, search_topics
 )
 from pathlib import Path
 from app.services.embeddings_factory import get_embeddings_provider
@@ -11,9 +11,8 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 
 
-
-topic_model = BERTopic.load("ayuda", embedding_model = get_embeddings_provider())
-
+model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
+topic_model = BERTopic.load("ayuda", embedding_model = model)
 
 
 
@@ -60,8 +59,8 @@ RECIBE LA IDEA CON SU PARRAFO
 
 PROCESA EL PARRAFO Y RETORNA MATCH
 '''
-@router.post("/topics/", response_model=List[MatchRequest], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
-async def match_idea_label(idearef: MatchRequest, k: int = 10):
+@router.post("/topics/", response_model=List[MatchResult], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
+async def match_idea_label(req: MatchRequest, k: int = 10):
 
     recs = client.retrieve(
         collection_name=COL_IDEAS,
@@ -73,16 +72,12 @@ async def match_idea_label(idearef: MatchRequest, k: int = 10):
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
 
     idea_rec = recs[0]
-    
-
-    topics, probs = topic_model.transform(idea_rec.paragraph)
+    payload = idea_rec.payload
+    #print(payload)
+    topics, probs = topic_model.transform(payload['ResumenLLM'])
     vector = probs[0][1:]
 
-
-
-
-
-    hits = search_topics(idea_vec, top_k=req.top_k, must_filter=None)
+    hits = search_topics(vector, top_k=req.top_k, must_filter=None)
     out: List[MatchResult] = []
     for h in hits:
         payload = h.payload or {}
@@ -94,9 +89,10 @@ async def match_idea_label(idearef: MatchRequest, k: int = 10):
             name=payload.get("Titulo", "Fondo"),
             agency=str(payload.get("Financiador")) if payload.get("Financiador") is not None else None,
             affinity=affinity,
-            semantic_score=semantic,
-            rules_score=rules,
-            explanations=notes,
+            semantic_score=0,
+            rules_score=0,
+            topic_score= affinity, 
+            explanations=[],
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
