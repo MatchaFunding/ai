@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
 
 from app.models.idea import Idea
+from app.models.instrumento import Instrumento
 from app.models.idea_refinada import IdeaRefinada
 from app.services.qdrant_store import upsert_points, COL_IDEAS
 from app.utils.llm_ollama import llm_generate
@@ -19,6 +20,20 @@ No inventes datos. No uses markdown. Emplea un tono profesional y conciso.
 
 Escribe solo el párrafo solicitado.
 """.strip()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @router.post("/", response_model=IdeaRefinada, summary="Crea la idea, la refina con LLM, vectoriza y guarda")
 async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
@@ -60,3 +75,29 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
 
     
     return IdeaRefinada(ID=idea.ID, Usuario=idea.Usuario, ResumenLLM=paragraph)
+
+
+
+
+
+
+def carga_labels_instrumento(instrumento: Instrumento, topicos: list):
+    payload = fondo.dict()
+    payload["uuid"] = str(uuid4())
+    if len(topicos)==0:
+        topics, probs = topic_model.transform(payload["Descripcion"])
+        topicos = probs[0][1:]
+        
+    client.upsert(
+        collection_name="topic_vectors",
+        points=[
+            PointStruct(
+                id=payload["uuid"],
+                vector=topicos,
+                payload=payload
+            )
+        ]
+    )
+    
+
+

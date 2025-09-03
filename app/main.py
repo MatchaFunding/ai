@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from app.api import ideas, ia, funds, match
 from app.services.embeddings_factory import get_embeddings_provider
-from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS
+from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS,COL_FUNDS_TOPICS,COL_PROYECT_SIMILARITY,NUMBER_OF_TOPICS
 from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
@@ -18,6 +18,9 @@ async def lifespan(app: FastAPI):
 
     ensure_collection(COL_IDEAS, vector_dim)
     ensure_collection(COL_FUNDS, vector_dim)
+    ensure_collection(COL_FUNDS_TOPICS, NUMBER_OF_TOPICS)
+    ensure_collection(COL_PROYECT_SIMILARITY, vector_dim)
+
 
     #
     app.state.provider = provider

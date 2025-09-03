@@ -9,6 +9,11 @@ from qdrant_client.models import (
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COL_FUNDS  = os.getenv("QDRANT_FUNDS_COLLECTION", "funds")
 COL_IDEAS  = os.getenv("QDRANT_IDEAS_COLLECTION", "ideas")
+COL_FUNDS_TOPICS = os.getenv("QDRANT_FUNDS_TOPICS_COLLECTION", "funds_topics")
+COL_PROYECT_SIMILARITY = os.getenv("QDRANT_SIMILAR_PROYECTS_COLLECTION", "similar_proyects")
+NUMBER_OF_TOPICS = os.getenv("NUMBER_OF_TOPICS", 90)
+
+
 
 client = QdrantClient(url=QDRANT_URL)
 
@@ -35,6 +40,25 @@ def search_funds(
         limit=top_k,
         query_filter=must_filter
     )
+
+
+def search_topics(
+    query_vector: List[float],
+    top_k: int = 10,
+    must_filter: Filter | None = None
+):
+    return client.search(
+        collection_name=COL_FUNDS_TOPICS,
+        query_vector=query_vector,
+        limit=top_k,
+        query_filter=must_filter
+    )
+
+
+
+
+
+
 
 # Helpers de filtros (region/estado/tipo beneficiario, etc.)
 def build_filter(

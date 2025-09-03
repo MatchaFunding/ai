@@ -4,6 +4,11 @@ from qdrant_client.models import PointStruct
 from app.models.instrumento import Instrumento
 from app.services.qdrant_store import upsert_points
 
+from app.services.embeddings_factory import get_embeddings_provider
+from bertopic import BERTopic
+topic_model = BERTopic.load("ayuda", embedding_model = get_embeddings_provider())
+
+
 router = APIRouter(prefix="/funds", tags=["funds"])
 
 def _text_of_fund(inst: Instrumento) -> str:
@@ -21,7 +26,35 @@ async def upsert_funds(items: List[Instrumento], request: Request) -> dict:
     for inst, vec in zip(items, vectors):
         payload = inst.model_dump()
         payload.setdefault("Estado", inst.Estado)
+        topics, probs = topic_model.transform(payload.Descripcion)
+        topicos = probs[0][1:]
+        client.upsert(
+        collection_name="QDRANT_FUNDS_TOPICS_COLLECTION",
+        points=[
+            PointStruct(
+                id=payload.ID,
+                vector=topicos,
+                payload=payload
+                )
+            ]
+        )
+
         points.append(PointStruct(id=int(inst.ID), vector=vec, payload=payload))
 
+
     upsert_points("funds", points)
+
+
+
+
+
+
     return {"upserted": len(points)}
+
+
+
+
+
+
+
+
