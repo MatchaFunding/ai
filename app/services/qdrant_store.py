@@ -55,6 +55,18 @@ def search_topics(
     )
 
 
+def search_projects(
+    query_vector: List[float],
+    top_k: int = 10,
+    must_filter: Filter | None = None
+):
+    return client.search(
+        collection_name=COL_PROYECT_SIMILARITY,
+        query_vector=query_vector,
+        limit=top_k,
+        query_filter=must_filter
+    )
+
 
 
 

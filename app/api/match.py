@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from qdrant_client.models import PointStruct, Filter
 from app.services.qdrant_store import (
-    COL_IDEAS, COL_FUNDS, client, search_funds, build_filter, upsert_points, search_topics
+    COL_IDEAS, COL_FUNDS, client, search_funds, build_filter, upsert_points, search_topics,COL_PROYECT_SIMILARITY,search_projects
 )
 from pathlib import Path
 from app.services.embeddings_factory import get_embeddings_provider
@@ -61,7 +61,7 @@ PROCESA EL PARRAFO Y RETORNA MATCH
 '''
 @router.post("/topics/", response_model=List[MatchResult], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
 async def match_idea_label(req: MatchRequest, k: int = 10):
-
+    client.get_collection(COL_IDEAS)
     recs = client.retrieve(
         collection_name=COL_IDEAS,
         ids=[req.idea_id],
@@ -73,12 +73,15 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
 
     idea_rec = recs[0]
     payload = idea_rec.payload
-    #print(payload)
+    print(payload)
     topics, probs = topic_model.transform(payload['ResumenLLM'])
     vector = probs[0][1:]
-
+    print(vector)
+    print("suicidio1")
     hits = search_topics(vector, top_k=req.top_k, must_filter=None)
+    print("suicidio2")
     out: List[MatchResult] = []
+    print("suicidio3")
     for h in hits:
         payload = h.payload or {}
         
@@ -94,6 +97,7 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
             topic_score= affinity, 
             explanations=[],
         ))
+    print("suicidio4")
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
@@ -169,6 +173,40 @@ async def match(req: MatchRequest, request: Request):
             semantic_score=semantic,
             rules_score=rules,
             explanations=notes,
+            topic_score=0
+        ))
+    out.sort(key=lambda x: x.affinity, reverse=True)
+    return out
+
+
+@router.post("/match/projectmatch", response_model=List[MatchResult])
+async def match(req: MatchRequest, request: Request):
+    
+    recs = client.retrieve(
+        collection_name=COL_IDEAS,
+        ids=[req.idea_id],
+        with_vectors=True,
+        with_payload=True,
+    )
+    if not recs:
+        raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
+
+    idea_rec = recs[0]
+    idea_vec = idea_rec.vector
+    hits = search_projects(idea_vec, top_k=req.top_k, must_filter=None)
+    out: List[MatchResult] = []
+    for h in hits:
+        payload = h.payload or {}
+        semantic = float(h.score)
+        affinity = semantic
+        out.append(MatchResult(
+            call_id=int(h.id),
+            name=payload.get("Titulo", "Descripcion"),
+            agency=str(payload.get("Area")) if payload.get("Area") is not None else None,
+            affinity=affinity,
+            semantic_score=semantic,
+            rules_score= 0 ,
+            explanations=[],
             topic_score=0
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)

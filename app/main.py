@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 
-from app.api import ideas, ia, funds, match
+from app.api import ideas, ia, funds, match,projects
 from app.services.embeddings_factory import get_embeddings_provider
 from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS,COL_FUNDS_TOPICS,COL_PROYECT_SIMILARITY,NUMBER_OF_TOPICS
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,7 +61,7 @@ app.include_router(ideas.router, prefix=API_PREFIX)
 app.include_router(ia.router,    prefix=API_PREFIX)
 app.include_router(funds.router, prefix=API_PREFIX)
 app.include_router(match.router, prefix=API_PREFIX)
-
+app.include_router(projects.router, prefix=API_PREFIX)
 
 
 from fastapi import FastAPI
