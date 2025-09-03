@@ -169,6 +169,7 @@ async def match(req: MatchRequest, request: Request):
             semantic_score=semantic,
             rules_score=rules,
             explanations=notes,
+            topic_score=0
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
