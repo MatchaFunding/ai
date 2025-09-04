@@ -77,11 +77,11 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
     topics, probs = topic_model.transform(payload['ResumenLLM'])
     vector = probs[0][1:]
     print(vector)
-    print("suicidio1")
+    #print("suicidio1")
     hits = search_topics(vector, top_k=req.top_k, must_filter=None)
-    print("suicidio2")
+    #print("suicidio2")
     out: List[MatchResult] = []
-    print("suicidio3")
+    #print("suicidio3")
     for h in hits:
         payload = h.payload or {}
         
@@ -130,6 +130,10 @@ async def match(req: MatchRequest, request: Request):
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
 
     idea_rec = recs[0]
+    payload = idea_rec.payload
+    #print(payload)
+    topics, probs = topic_model.transform(payload['ResumenLLM'])
+    vector = probs[0][1:]
     idea_vec = idea_rec.vector
 
     
@@ -157,14 +161,16 @@ async def match(req: MatchRequest, request: Request):
         tipos_perfil=req.tipos_perfil
     )
 
-    
+    hits_topic = search_topics(vector, top_k=req.top_k, must_filter=None)
     hits = search_funds(idea_vec, top_k=req.top_k, must_filter=qf)
     out: List[MatchResult] = []
-    for h in hits:
+
+    for h_topic, h in zip(hits_topic, hits):
         payload = h.payload or {}
         rules, notes = _rules_score(payload, req)
         semantic = float(h.score)
-        affinity = 0.75 * semantic + 0.25 * rules
+        topic = float(h_topic.score)
+        affinity = 0.20 * semantic + 0.25 * rules + 0.55*topic
         out.append(MatchResult(
             call_id=int(h.id),
             name=payload.get("Titulo", "Fondo"),
@@ -173,7 +179,7 @@ async def match(req: MatchRequest, request: Request):
             semantic_score=semantic,
             rules_score=rules,
             explanations=notes,
-            topic_score=0
+            topic_score=topic
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
