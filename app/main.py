@@ -32,8 +32,7 @@ app = FastAPI(title="IA Service", version="0.1.0", lifespan=lifespan)
 API_PREFIX = "/api/v1"
 
 origins = [
-    "http://localhost:5173",  # tu frontend local
-    "http://127.0.0.1:5173",
+    "*"
     
 ]
 

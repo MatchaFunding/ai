@@ -6,7 +6,8 @@ from app.models.instrumento import Instrumento
 from app.models.idea_refinada import IdeaRefinada
 from app.services.qdrant_store import upsert_points, COL_IDEAS
 from app.utils.llm_ollama import llm_generate
-
+import httpx
+from fastapi import HTTPException
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 PROMPT_TEMPLATE = """
@@ -26,13 +27,6 @@ Sigue las siguientes instrucciones
 
 
 """.strip()
-
-
-
-
-
-
-
 
 
 
