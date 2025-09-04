@@ -111,7 +111,14 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
 
 
 
+'''
+HITS TOPIC Y HITS SEMANTICA PROBABLEMENTE DEVUELVEN LOS OBJETOS EN ORDEN DISTINTO
 
+SE DEBE PRIMERO OBTENER TOP 10 DE UNA DE LAS BUSQUEDAS Y CALCULAR LA SIMILITUD VECTORIAL PARA CADA H RESULTANTE
+
+RESOLVER EL PROXIMO SPRINT
+
+'''
 
 
 
@@ -183,7 +190,6 @@ async def match(req: MatchRequest, request: Request):
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
-
 
 @router.post("/match/projectmatch", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
