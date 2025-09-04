@@ -40,6 +40,37 @@ async def upsert_proyects(items: List[Proyecto], request: Request) -> dict:
     return {"upserted": len(points)}
 
 
+from app.services.qdrant_store import search_all_points
+
+@router.get("/all", summary="Obtener todos los proyectos indexados")
+async def get_all_proyects(request: Request) -> dict:
+    results,next_page = search_all_points("similar_proyects")
+    
+    proyectos = [item.payload for item in results]
+    return {"projects": proyectos}
+
+
+@router.post("/upsertusers", summary="Indexar/actualizar proyectos (batch)")
+async def upsert_proyects_users(items: List[Proyecto], request: Request) -> dict:
+    provider = request.app.state.provider
+    texts = [_text_of_proyect(x) for x in items]
+    vectors = await provider.embed(texts)
+    lista_topic = []
+    points = []
+    for inst, vec in zip(items, vectors):
+        payload = inst.model_dump()
+        
+        
+
+        
+
+        points.append(PointStruct(id=int(inst.ID), vector=vec, payload=payload))
+
+    upsert_points("user_projects", points)
+
+    return {"upserted": len(points)}
+
+
 
 
 

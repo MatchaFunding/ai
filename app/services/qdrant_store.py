@@ -10,6 +10,7 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COL_FUNDS  = os.getenv("QDRANT_FUNDS_COLLECTION", "funds")
 COL_IDEAS  = os.getenv("QDRANT_IDEAS_COLLECTION", "ideas")
 COL_FUNDS_TOPICS = os.getenv("QDRANT_FUNDS_TOPICS_COLLECTION", "funds_topics")
+COL_USER_PROYECTS = os.getenv("QDRANT_USER_PROYECTS_COLLECTION", "user_projects")
 COL_PROYECT_SIMILARITY = os.getenv("QDRANT_SIMILAR_PROYECTS_COLLECTION", "similar_proyects")
 NUMBER_OF_TOPICS = os.getenv("NUMBER_OF_TOPICS", 90)
 
@@ -69,7 +70,14 @@ def search_projects(
 
 
 
-
+def search_all_points(
+        collection: str,
+):
+    return client.scroll(
+        collection_name=collection,
+        limit=1000,
+        with_payload=True
+    )
 
 
 # Helpers de filtros (region/estado/tipo beneficiario, etc.)

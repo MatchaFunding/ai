@@ -223,3 +223,37 @@ async def match(req: MatchRequest, request: Request):
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
+
+
+@router.post("/match/projectmatchhistoric", response_model=List[MatchResult])
+async def match(req: MatchRequest, request: Request):
+    
+    recs = client.retrieve(
+        collection_name="user_projects",
+        ids=[req.idea_id],
+        with_vectors=True,
+        with_payload=True,
+    )
+    if not recs:
+        raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
+
+    idea_rec = recs[0]
+    idea_vec = idea_rec.vector
+    hits = search_projects(idea_vec, top_k=req.top_k, must_filter=None)
+    out: List[MatchResult] = []
+    for h in hits:
+        payload = h.payload or {}
+        semantic = float(h.score)
+        affinity = semantic
+        out.append(MatchResult(
+            call_id=int(h.id),
+            name=payload.get("Titulo", "Descripcion"),
+            agency=str(payload.get("Area")) if payload.get("Area") is not None else None,
+            affinity=affinity,
+            semantic_score=semantic,
+            rules_score= 0 ,
+            explanations=[],
+            topic_score=0
+        ))
+    out.sort(key=lambda x: x.affinity, reverse=True)
+    return out

@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     ensure_collection(COL_FUNDS, vector_dim)
     ensure_collection(COL_FUNDS_TOPICS, NUMBER_OF_TOPICS)
     ensure_collection(COL_PROYECT_SIMILARITY, vector_dim)
-
+    ensure_collection("user_projects", vector_dim)
 
     #
     app.state.provider = provider
