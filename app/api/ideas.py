@@ -18,7 +18,13 @@ No inventes datos. No uses markdown. Emplea un tono profesional y conciso.
 {task}
 </task>
 
-Escribe solo el párrafo solicitado.
+Sigue las siguientes instrucciones
+1. Escribe un parrafo breve que captura el campo en el que se va a desarrollar la idea. NO USAR MARKDOWN
+2. No inventar cosas que no esten en los parámetros ingresados.
+3. Si tienes información disponible de los procesos de la CORFO y ANID usalos para construir el parrafo más adecuadamente.
+4. No digas explicitamente "factor diferenciador", usa modos del habla distintos como "de distingue las alternativas del mercado haciendo---" tampoco menciones directamente a CORFO y ANID
+
+
 """.strip()
 
 
