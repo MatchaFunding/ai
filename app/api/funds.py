@@ -7,16 +7,15 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from app.services.embeddings_factory import get_embeddings_provider
 
-
 model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
 topic_model = BERTopic.load("ayuda", embedding_model = model)
 
-
 router = APIRouter(prefix="/funds", tags=["funds"])
 
-def _text_of_fund(inst: Instrumento) -> str:
+# Junta todos los campos de texto del instrumento en un unico String
+def _text_of_fund(i: Instrumento) -> str:
     return ". ".join(filter(None, [
-        inst.Titulo, inst.Descripcion, inst.Requisitos, inst.Beneficios, inst.TipoDePerfil
+        i.Titulo, inst.Descripcion, inst.Requisitos, inst.Beneficios, inst.TipoDePerfil
     ]))
 
 @router.post("/upsert", summary="Indexar/actualizar fondos (batch)")
