@@ -8,7 +8,7 @@ router = APIRouter(prefix="/ia", tags=["ia"])
 
 @router.post("/process-idea", response_model=IdeaProcessed)
 async def process_idea(idea: Idea, request: Request) -> IdeaProcessed:
-    provider = request.app.state.provider  
+    provider = request.app.state.provider
     text = f"{idea.Campo}. {idea.Problema}. {idea.Publico}. {idea.Innovacion}."
     [embedding] = await provider.embed([text])
 

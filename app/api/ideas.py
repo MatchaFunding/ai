@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
-
 from app.models.idea import Idea
 from app.models.instrumento import Instrumento
 from app.models.idea_refinada import IdeaRefinada
 from app.services.qdrant_store import upsert_points, COL_IDEAS
 from app.utils.llm_ollama import llm_generate
-import httpx
-from fastapi import HTTPException
+#from fastapi import HTTPException
+#import httpx
+
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
 PROMPT_TEMPLATE = """
@@ -24,20 +24,11 @@ Sigue las siguientes instrucciones
 2. No inventar cosas que no esten en los parámetros ingresados.
 3. Si tienes información disponible de los procesos de la CORFO y ANID usalos para construir el parrafo más adecuadamente.
 4. No digas explicitamente "factor diferenciador", usa modos del habla distintos como "de distingue las alternativas del mercado haciendo---" tampoco menciones directamente a CORFO y ANID
-
-
 """.strip()
 
-
-
-
-
-
-
-
+# Crea una idea para un proyecto usando Ollama, la vectoriza y la guarda en Qdrant
 @router.post("/", response_model=IdeaRefinada, summary="Crea la idea, la refina con LLM, vectoriza y guarda")
 async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
-    
     task = (
         f"Sintetiza en 1 párrafo:\n"
         f"- Campo: {idea.Campo}\n"
@@ -46,18 +37,12 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
         f"- Diferenciador: {idea.Innovacion}"
     )
     prompt = PROMPT_TEMPLATE.format(task=task)
-
-    ## Llamamos a Ollama
+    # Llamamos a Ollama
     paragraph = await llm_generate(prompt)
     if not paragraph:
-        
         paragraph = f"{idea.Campo}. {idea.Problema}. {idea.Publico}. {idea.Innovacion}."
-
-    
     provider = request.app.state.provider
     [embedding] = await provider.embed([paragraph])
-
-    
     point = PointStruct(
         id=int(idea.ID),
         vector=embedding,
@@ -72,22 +57,15 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
         },
     )
     upsert_points(COL_IDEAS, [point])
-
-    
     return IdeaRefinada(ID=idea.ID, Usuario=idea.Usuario, ResumenLLM=paragraph)
 
-
-
-
-
-
+# Carga las etiquetas un instrumentos
 def carga_labels_instrumento(instrumento: Instrumento, topicos: list):
     payload = fondo.dict()
     payload["uuid"] = str(uuid4())
     if len(topicos)==0:
         topics, probs = topic_model.transform(payload["Descripcion"])
         topicos = probs[0][1:]
-        
     client.upsert(
         collection_name="topic_vectors",
         points=[
@@ -98,6 +76,3 @@ def carga_labels_instrumento(instrumento: Instrumento, topicos: list):
             )
         ]
     )
-    
-
-

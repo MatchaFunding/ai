@@ -2,11 +2,19 @@ from fastapi import FastAPI
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from sentence_transformers import SentenceTransformer
+from bertopic import BERTopic
 
-# Rutas desactivadas para depurar
-#from app.api import ideas, ia, funds, match, projects
-#from app.services.embeddings_factory import get_embeddings_provider
-#from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS,COL_FUNDS_TOPICS,COL_PROYECT_SIMILARITY,NUMBER_OF_TOPICS
+# Rutas de los controladores para cada servicio
+from app.services.embeddings_factory import get_embeddings_provider
+from app.services.qdrant_store import *
+from app.api import ideas
+from app.api import ia
+from app.api import funds
+from app.api import match
+from app.api import projects
+#from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS,COL_FUNDS_TOPICS,COL_PROYECT_SIMILARITY,NUMBER_OF_TOPIC
+
 
 # Prefijo de la ruta para acceder a la API
 API_PREFIX = "/api/v1"
@@ -14,22 +22,28 @@ API_PREFIX = "/api/v1"
 # Carga los datos antes de habilitar el servicio
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-	## Obtiene el proveedor de los embeddings
-    #provider = get_embeddings_provider()
-	## Obtiene los detalles del proveedor
-    #probe = await provider.embed(["_dim_probe"])
-	## Almacena la dimension de los vectores
-    #vector_dim = len(probe[0])
-	## Carga los datos en collecciones de Qdrant
-    #ensure_collection(COL_IDEAS, vector_dim)
-    #ensure_collection(COL_FUNDS, vector_dim)
-    #ensure_collection(COL_FUNDS_TOPICS, NUMBER_OF_TOPICS)
-    #ensure_collection(COL_PROYECT_SIMILARITY, vector_dim)
-    #ensure_collection("user_projects", vector_dim)
-	## Guarda los datos en el estado de la aplicacion
-    #app.state.provider = provider
-    #app.state.vector_dim = vector_dim
-    print(f"Cargando vectores y modelo de topicos...")
+    # Inicia el servicio de Qdrant y guarda sus propiedades
+    print("Iniciando servicio de Qdrant...")
+    provider = get_embeddings_provider()
+    probe = await provider.embed(["_dim_probe"])
+    vector_dim = len(probe[0])
+    # Carga los datos en collecciones de Qdrant
+    print("Cargando colecciones de Qdrant...")
+    ensure_collection(COL_IDEAS, vector_dim)
+    ensure_collection(COL_FUNDS, vector_dim)
+    ensure_collection(COL_FUNDS_TOPICS, NUMBER_OF_TOPICS)
+    ensure_collection(COL_PROYECT_SIMILARITY, vector_dim)
+    ensure_collection("user_projects", vector_dim)
+    # Inicia el modelo de BERTopic y guarda sus propiedades
+    print("Iniciando modelo de BERTopic...")
+    model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
+    topic_model = BERTopic.load("ayuda", embedding_model = model)
+    # Guarda en memoria los servicios y modelos compartidos
+    print("Estableciento estados...")
+    app.state.provider = provider
+    app.state.vector_dim = vector_dim
+    app.state.topic_model = topic_model
+    print("Modelos cargados exitosamente!")
     yield
 
 app = FastAPI(title="MatchaFunding - API de Inteligencia Artificial", version="0.1.0", lifespan=lifespan)
@@ -60,8 +74,8 @@ def health():
     }
 
 # Routers para los diferentes servicios
-#app.include_router(projects.router, prefix=API_PREFIX)
-#app.include_router(ideas.router, prefix=API_PREFIX)
-#app.include_router(funds.router, prefix=API_PREFIX)
-#app.include_router(match.router, prefix=API_PREFIX)
-#app.include_router(ia.router, prefix=API_PREFIX)
+app.include_router(projects.router, prefix=API_PREFIX)
+app.include_router(ideas.router, prefix=API_PREFIX)
+app.include_router(funds.router, prefix=API_PREFIX)
+app.include_router(match.router, prefix=API_PREFIX)
+app.include_router(ia.router, prefix=API_PREFIX)

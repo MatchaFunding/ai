@@ -2,19 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from qdrant_client.models import PointStruct, Filter
-from app.services.qdrant_store import (
-    COL_IDEAS, COL_FUNDS, client, search_funds, build_filter, upsert_points, search_topics,COL_PROYECT_SIMILARITY,search_projects
-)
-from pathlib import Path
-from app.services.embeddings_factory import get_embeddings_provider
-from bertopic import BERTopic
-from sentence_transformers import SentenceTransformer
-
-
-model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
-topic_model = BERTopic.load("ayuda", embedding_model = model)
-
-
+from app.services.qdrant_store import *
 
 router = APIRouter(prefix="/ia", tags=["ia"])
 
@@ -48,10 +36,6 @@ def _rules_score(payload: dict, req: MatchRequest) -> tuple[float, List[str]]:
             score -= 0.4; notes.append("Tipo de perfil no coincide")
     return max(0.0, min(score, 1.0)), notes
 
-
-
-
-
 '''
 MATCH IDEA LABEL
 
@@ -60,7 +44,7 @@ RECIBE LA IDEA CON SU PARRAFO
 PROCESA EL PARRAFO Y RETORNA MATCH
 '''
 @router.post("/topics/", response_model=List[MatchResult], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
-async def match_idea_label(req: MatchRequest, k: int = 10):
+async def match_idea_label(req: MatchRequest, request: Request, k: int = 10):
     client.get_collection(COL_IDEAS)
     recs = client.retrieve(
         collection_name=COL_IDEAS,
@@ -70,11 +54,10 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
     )
     if not recs:
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-
     idea_rec = recs[0]
     payload = idea_rec.payload
     print(payload)
-    topics, probs = topic_model.transform(payload['ResumenLLM'])
+    topics, probs = request.app.state.topic_model.transform(payload['ResumenLLM'])
     vector = probs[0][1:]
     print(vector)
     #print("suicidio1")
@@ -84,7 +67,6 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
     #print("suicidio3")
     for h in hits:
         payload = h.payload or {}
-        
         topic = float(h.score)
         affinity = 0.75 * topic
         out.append(MatchResult(
@@ -101,16 +83,6 @@ async def match_idea_label(req: MatchRequest, k: int = 10):
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
-
-
-
-
-
-
-
-
-
-
 '''
 HITS TOPIC Y HITS SEMANTICA PROBABLEMENTE DEVUELVEN LOS OBJETOS EN ORDEN DISTINTO
 
@@ -119,14 +91,8 @@ SE DEBE PRIMERO OBTENER TOP 10 DE UNA DE LAS BUSQUEDAS Y CALCULAR LA SIMILITUD V
 RESOLVER EL PROXIMO SPRINT
 
 '''
-
-
-
-
-
 @router.post("/match", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
-    
     recs = client.retrieve(
         collection_name=COL_IDEAS,
         ids=[req.idea_id],
@@ -135,15 +101,12 @@ async def match(req: MatchRequest, request: Request):
     )
     if not recs:
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-
     idea_rec = recs[0]
     payload = idea_rec.payload
     #print(payload)
-    topics, probs = topic_model.transform(payload['ResumenLLM'])
+    topics, probs = request.app.state.topic_model.transform(payload['ResumenLLM'])
     vector = probs[0][1:]
     idea_vec = idea_rec.vector
-
-    
     if not idea_vec:
         payload = idea_rec.payload or {}
         text = payload.get("ResumenLLM") or " ".join(filter(None, [
@@ -153,25 +116,19 @@ async def match(req: MatchRequest, request: Request):
         text = text.strip()
         if not text:
             raise HTTPException(status_code=500, detail="Idea almacenada sin vector ni texto para recomputar.")
-
         provider = request.app.state.provider
         [idea_vec] = await provider.embed([text])
-
         upsert_points(COL_IDEAS, [
             PointStruct(id=int(req.idea_id), vector=idea_vec, payload=payload)
         ])
-
-    
     qf: Filter | None = build_filter(
         estado=req.estado,
         regiones=req.regiones,
         tipos_perfil=req.tipos_perfil
     )
-
     hits_topic = search_topics(vector, top_k=req.top_k, must_filter=None)
     hits = search_funds(idea_vec, top_k=req.top_k, must_filter=qf)
     out: List[MatchResult] = []
-
     for h_topic, h in zip(hits_topic, hits):
         payload = h.payload or {}
         rules, notes = _rules_score(payload, req)
@@ -193,7 +150,6 @@ async def match(req: MatchRequest, request: Request):
 
 @router.post("/match/projectmatch", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
-    
     recs = client.retrieve(
         collection_name=COL_IDEAS,
         ids=[req.idea_id],
@@ -202,7 +158,6 @@ async def match(req: MatchRequest, request: Request):
     )
     if not recs:
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-
     idea_rec = recs[0]
     idea_vec = idea_rec.vector
     hits = search_projects(idea_vec, top_k=req.top_k, must_filter=None)
@@ -224,10 +179,8 @@ async def match(req: MatchRequest, request: Request):
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
-
 @router.post("/match/projectmatchhistoric", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
-    
     recs = client.retrieve(
         collection_name="user_projects",
         ids=[req.idea_id],
@@ -236,7 +189,6 @@ async def match(req: MatchRequest, request: Request):
     )
     if not recs:
         raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-
     idea_rec = recs[0]
     idea_vec = idea_rec.vector
     hits = search_projects(idea_vec, top_k=req.top_k, must_filter=None)

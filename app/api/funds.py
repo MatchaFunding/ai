@@ -3,19 +3,14 @@ from typing import List
 from qdrant_client.models import PointStruct
 from app.models.instrumento import Instrumento
 from app.services.qdrant_store import upsert_points
-from bertopic import BERTopic
-from sentence_transformers import SentenceTransformer
 from app.services.embeddings_factory import get_embeddings_provider
-
-model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
-topic_model = BERTopic.load("ayuda", embedding_model = model)
 
 router = APIRouter(prefix="/funds", tags=["funds"])
 
 # Junta todos los campos de texto del instrumento en un unico String
 def _text_of_fund(i: Instrumento) -> str:
     return ". ".join(filter(None, [
-        i.Titulo, inst.Descripcion, inst.Requisitos, inst.Beneficios, inst.TipoDePerfil
+        i.Titulo, i.Descripcion, i.Requisitos, i.Beneficios, i.TipoDePerfil
     ]))
 
 @router.post("/upsert", summary="Indexar/actualizar fondos (batch)")
@@ -28,7 +23,7 @@ async def upsert_funds(items: List[Instrumento], request: Request) -> dict:
     for inst, vec in zip(items, vectors):
         payload = inst.model_dump()
         payload.setdefault("Estado", inst.Estado)
-        topics, probs = topic_model.transform(inst.Descripcion)
+        topics, probs = request.app.state.topic_model.transform(inst.Descripcion)
         topicos = probs[0][1:]
 
         punto = PointStruct(id=int(inst.ID), vector=topicos, payload=payload)

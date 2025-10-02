@@ -16,7 +16,8 @@ COL_PROYECT_SIMILARITY = os.getenv("QDRANT_SIMILAR_PROYECTS_COLLECTION", "simila
 NUMBER_OF_TOPICS = os.getenv("NUMBER_OF_TOPICS", 90)
 
 # Se conecta al servicio de Qdrant ya levantado
-client = QdrantClient(url=QDRANT_URL)
+#client = QdrantClient(url=QDRANT_URL))
+client = QdrantClient(":memory:")
 
 # Carga los nuevos elementos en la coleccion
 def ensure_collection(name: str, vector_size: int):
@@ -91,6 +92,6 @@ def build_filter(
         conds.append(FieldCondition(key="Regiones", match=MatchAny(any=regiones)))
     if tipos_perfil:
         conds.append(FieldCondition(key="TiposDePerfil", match=MatchAny(any=tipos_perfil)))
-	if conds:
-		return Filter(must=conds)
-	return None
+    if conds:
+        return Filter(must=conds)
+    return None
