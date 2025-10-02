@@ -68,10 +68,16 @@ pytest -q
   deactivate
 ```
 
-
-
 ## Levantar docker con QDrant
 
 ```
 docker run -p 6333:6333 -v $(pwd)/qdrant_storage:/qdrant/storage qdrant/qdrant
+```
+
+## Levantar API de Ollama
+
+Para llamadas que hagan uso de Ollama (como generar ideas), usar el siguiente comando antes de levantar FastAPI
+
+```
+ollama serve
 ```
