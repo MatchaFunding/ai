@@ -45,9 +45,9 @@ PROCESA EL PARRAFO Y RETORNA MATCH
 '''
 @router.post("/topics/", response_model=List[MatchResult], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
 async def match_idea_label(req: MatchRequest, request: Request, k: int = 10):
-    client.get_collection(COL_IDEAS)
+    client.get_collection("ideas")
     recs = client.retrieve(
-        collection_name=COL_IDEAS,
+        collection_name="ideas",
         ids=[req.idea_id],
         with_vectors=True,
         with_payload=True,
@@ -94,7 +94,7 @@ RESOLVER EL PROXIMO SPRINT
 @router.post("/match", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
     recs = client.retrieve(
-        collection_name=COL_IDEAS,
+        collection_name="ideas",
         ids=[req.idea_id],
         with_vectors=True,
         with_payload=True,
@@ -118,7 +118,7 @@ async def match(req: MatchRequest, request: Request):
             raise HTTPException(status_code=500, detail="Idea almacenada sin vector ni texto para recomputar.")
         provider = request.app.state.provider
         [idea_vec] = await provider.embed([text])
-        upsert_points(COL_IDEAS, [
+        upsert_points("ideas", [
             PointStruct(id=int(req.idea_id), vector=idea_vec, payload=payload)
         ])
     qf: Filter | None = build_filter(
@@ -151,7 +151,7 @@ async def match(req: MatchRequest, request: Request):
 @router.post("/match/projectmatch", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
     recs = client.retrieve(
-        collection_name=COL_IDEAS,
+        collection_name="ideas",
         ids=[req.idea_id],
         with_vectors=True,
         with_payload=True,

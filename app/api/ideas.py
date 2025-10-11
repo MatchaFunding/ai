@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
+
 from app.models.idea import Idea
 from app.models.instrumento import Instrumento
 from app.models.idea_refinada import IdeaRefinada
-from app.services.qdrant_store import upsert_points, COL_IDEAS
+from app.services.qdrant_store import upsert_points
 from app.utils.llm_ollama import llm_generate
-#from fastapi import HTTPException
-#import httpx
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
 
@@ -56,7 +55,7 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
             "ResumenLLM": paragraph,   
         },
     )
-    upsert_points(COL_IDEAS, [point])
+    upsert_points("ideas", [point])
     return IdeaRefinada(ID=idea.ID, Usuario=idea.Usuario, ResumenLLM=paragraph)
 
 # Carga las etiquetas un instrumentos

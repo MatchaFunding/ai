@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
 from app.models.idea import Idea
 from app.models.idea_processed import IdeaProcessed
-from app.services.qdrant_store import upsert_points, COL_IDEAS
+from app.services.qdrant_store import upsert_points
 
 router = APIRouter(prefix="/ia", tags=["ia"])
 
@@ -24,7 +24,7 @@ async def process_idea(idea: Idea, request: Request) -> IdeaProcessed:
             "Innovacion": idea.Innovacion,
         }
     )
-    upsert_points(COL_IDEAS, [point])
+    upsert_points("ideas", [point])
 
     return IdeaProcessed(
         ID=idea.ID,

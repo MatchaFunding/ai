@@ -13,8 +13,9 @@ from app.api import ia
 from app.api import funds
 from app.api import match
 from app.api import projects
-#from app.services.qdrant_store import ensure_collection, COL_IDEAS, COL_FUNDS,COL_FUNDS_TOPICS,COL_PROYECT_SIMILARITY,NUMBER_OF_TOPIC
 
+from app.api.projects import subir_proyectos_del_backend
+from app.api.funds import subir_instrumentos_del_backend
 
 # Prefijo de la ruta para acceder a la API
 API_PREFIX = "/api/v1"
@@ -29,10 +30,10 @@ async def lifespan(app: FastAPI):
     vector_dim = len(probe[0])
     # Carga los datos en collecciones de Qdrant
     print("Cargando colecciones de Qdrant...")
-    ensure_collection(COL_IDEAS, vector_dim)
-    ensure_collection(COL_FUNDS, vector_dim)
-    ensure_collection(COL_FUNDS_TOPICS, NUMBER_OF_TOPICS)
-    ensure_collection(COL_PROYECT_SIMILARITY, vector_dim)
+    ensure_collection("ideas", vector_dim)
+    ensure_collection("funds", vector_dim)
+    ensure_collection("funds_topics", NUMBER_OF_TOPICS)
+    ensure_collection("similar_proyects", vector_dim)
     ensure_collection("user_projects", vector_dim)
     # Inicia el modelo de BERTopic y guarda sus propiedades
     print("Iniciando modelo de BERTopic...")
@@ -43,6 +44,12 @@ async def lifespan(app: FastAPI):
     app.state.provider = provider
     app.state.vector_dim = vector_dim
     app.state.topic_model = topic_model
+    # Finalmente poblar con los datos en el BackEnd
+    print("Cargando proyectos desde el BackEnd...")
+    await subir_proyectos_del_backend(provider)
+    print("Cargando instrumentos desde el BackEnd...")
+    await subir_instrumentos_del_backend(provider)
+    # Listo
     print("Modelos cargados exitosamente!")
     yield
 
