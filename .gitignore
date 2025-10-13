@@ -2,3 +2,7 @@
 venv/
 ENV/
 .env
+qdrant_storage
+./qdrant_storage
+qdrant_storage;C
+./qdrant_storage;C
