@@ -13,8 +13,8 @@ QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 NUMBER_OF_TOPICS = os.getenv("NUMBER_OF_TOPICS", 90)
 
 # Se conecta al servicio de Qdrant ya levantado
-#client = QdrantClient(url=QDRANT_URL))
-client = QdrantClient(":memory:")
+client = QdrantClient(url=QDRANT_URL)
+#client = QdrantClient(":memory:")
 
 # Carga los nuevos elementos en la coleccion
 def ensure_collection(name: str, vector_size: int):

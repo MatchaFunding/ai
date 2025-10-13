@@ -40,6 +40,7 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
     paragraph = await llm_generate(prompt)
     if not paragraph:
         paragraph = f"{idea.Campo}. {idea.Problema}. {idea.Publico}. {idea.Innovacion}."
+    # Carga los datos en Qdrant
     provider = request.app.state.provider
     [embedding] = await provider.embed([paragraph])
     point = PointStruct(

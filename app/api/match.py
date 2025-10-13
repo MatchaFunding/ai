@@ -62,65 +62,13 @@ def _rules_score(payload: dict, req: MatchRequest) -> tuple[float, List[str]]:
     return max(0.0, min(score, 1.0)), notes
 
 '''
-MATCH IDEA LABEL
-
-RECIBE LA IDEA CON SU PARRAFO
-
-PROCESA EL PARRAFO Y RETORNA MATCH
-'''
-@router.post("/topics/", response_model=List[MatchResult], summary="RECIBE LA IDEA CON SU PARRAFO PROCESA EL PARRAFO Y RETORNA CON FONDOS")
-async def match_idea_label(req: MatchRequest, request: Request, k: int = 10):
-    client.get_collection("ideas")
-    recs = client.retrieve(
-        collection_name="ideas",
-        ids=[req.idea_id],
-        with_vectors=True,
-        with_payload=True,
-    )
-    if not recs:
-        raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-    idea_rec = recs[0]
-    payload = idea_rec.payload
-    print(payload)
-    topics, probs = request.app.state.topic_model.transform(payload['ResumenLLM'])
-    vector = probs[0][1:]
-    print(vector)
-    #print("suicidio1")
-    hits = search_topics(vector, top_k=req.top_k, must_filter=None)
-    #print("suicidio2")
-    out: List[MatchResult] = []
-    #print("suicidio3")
-    for h in hits:
-        payload = h.payload or {}
-        topic = float(h.score)
-        affinity = 0.75 * topic
-        out.append(MatchResult(
-            call_id=int(h.id),
-            name=payload.get("Titulo", "Fondo"),
-            agency=str(payload.get("Financiador")) if payload.get("Financiador") is not None else None,
-            affinity=affinity,
-            semantic_score=0,
-            rules_score=0,
-            topic_score= affinity, 
-            explanations=[],
-        ))
-    print("suicidio4")
-    out.sort(key=lambda x: x.affinity, reverse=True)
-    return out
-
-'''
-HITS TOPIC Y HITS SEMANTICA PROBABLEMENTE DEVUELVEN LOS OBJETOS EN ORDEN DISTINTO
-
-SE DEBE PRIMERO OBTENER TOP 10 DE UNA DE LAS BUSQUEDAS Y CALCULAR LA SIMILITUD VECTORIAL PARA CADA H RESULTANTE
-
-RESOLVER EL PROXIMO SPRINT
-
+Recibe el ID de una Idea subida por algun Usuario y luego obtiene los MatchResult
+mas similares en un arreglo
 '''
 @router.post("/match", response_model=List[MatchResult])
 async def match(req: MatchRequest, request: Request):
     try:
         print(f"Iniciando match para idea ID: {req.idea_id}")
-        
         recs = client.retrieve(
             collection_name="ideas",
             ids=[req.idea_id],
@@ -130,16 +78,13 @@ async def match(req: MatchRequest, request: Request):
         if not recs:
             print(f"Error: Idea {req.idea_id} no encontrada en colección 'ideas'")
             raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
-        
         idea_rec = recs[0]
         payload = idea_rec.payload
         print(f"Idea encontrada. Payload: {payload}")
-        
-        # Verificar que existe texto para procesar topics
         topics, probs = request.app.state.topic_model.transform(payload['ResumenLLM'])
         vector = probs[0][1:]
         print(f"Vector de topics generado. Dimensión: {len(vector)}")
-        
+        print(f"Vector de topicos generado: {vector}")
         idea_vec = idea_rec.vector
         if not idea_vec:
             print("Generando vector de idea...")
@@ -166,10 +111,12 @@ async def match(req: MatchRequest, request: Request):
         print("Buscando matches por topics...")
         hits_topic = search_topics(vector, top_k=req.top_k, must_filter=None)
         print(f"Encontrados {len(hits_topic)} matches por topics")
+        print(f"Matches por topico:\n{hits_topic}")
         
         print("Buscando matches semánticos...")
         hits = search_funds(idea_vec, top_k=req.top_k, must_filter=qf)
         print(f"Encontrados {len(hits)} matches semánticos")
+        print(f"Matches semanticos:\n{hits_topic}")
         
         out: List[MatchResult] = []
         for h_topic, h in zip(hits_topic, hits):
