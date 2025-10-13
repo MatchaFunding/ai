@@ -30,8 +30,7 @@ async def lifespan(app: FastAPI):
     provider = get_embeddings_provider()
     probe = await provider.embed(["_dim_probe"])
     vector_dim = len(probe[0])
-
-    ### Carga los datos en collecciones de Qdrant ###
+    # Carga los datos en collecciones de Qdrant
     print("Cargando colecciones de Qdrant...")
     # Colección ideas: ideas de los usuarios vectorizadas
     ensure_collection("ideas", vector_dim)
@@ -39,10 +38,8 @@ async def lifespan(app: FastAPI):
     ensure_collection("funds", vector_dim)
     # Tópicos de los fondos
     ensure_collection("funds_topics", NUMBER_OF_TOPICS)
-    # 
     ensure_collection("similar_proyects", vector_dim)
     ensure_collection("user_projects", vector_dim)
-
     # Inicia el modelo de BERTopic y guarda sus propiedades
     print("Iniciando modelo de BERTopic...")
     model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
@@ -53,10 +50,10 @@ async def lifespan(app: FastAPI):
     app.state.vector_dim = vector_dim
     app.state.topic_model = topic_model
     # Finalmente poblar con los datos en el BackEnd
-    print("Cargando proyectos desde el BackEnd...")
-    await subir_proyectos_del_backend(provider)
-    print("Cargando instrumentos desde el BackEnd...")
-    await subir_instrumentos_del_backend(provider)
+    #print("Cargando proyectos desde el BackEnd...")
+    #await subir_proyectos_del_backend(provider)
+    #print("Cargando instrumentos desde el BackEnd...")
+    #await subir_instrumentos_del_backend(provider)
     # Listo
     print("Modelos cargados exitosamente!")
     yield

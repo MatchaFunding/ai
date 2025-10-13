@@ -30,7 +30,7 @@ def _text_of_proyect_dict(p: dict) -> str:
 
 # Carga proyectos historicos desde el BackEnd
 def cargar_proyectos_de_backend():
-    url = 'https://backend.matchafunding.com/vertodoslosproyectos/'
+    url = 'https://core.matchafunding.com/vertodoslosproyectos/'
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
