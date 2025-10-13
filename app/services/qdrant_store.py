@@ -73,7 +73,8 @@ def search_all_points(collection: str):
     return client.scroll(
         collection_name=collection,
         limit=1000,
-        with_payload=True
+        with_payload=True,
+        with_vectors=True
     )
 
 # Helpers de filtros (region/estado/tipo beneficiario, etc.)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 from pydantic import create_model
 from typing import List
 from bertopic import BERTopic
@@ -7,9 +7,12 @@ from qdrant_client.models import PointStruct
 import requests
 
 from app.models.proyecto import Proyecto
+from app.models.user_project import UserProject
+from app.models.match_result import MatchResult
 from app.services.qdrant_store import upsert_points
 from app.services.qdrant_store import search_all_points
 from app.services.embeddings_factory import get_embeddings_provider
+from app.services.qdrant_store import *
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -92,6 +95,91 @@ async def upsert_proyects_users(items: List[Proyecto], request: Request) -> dict
     points = []
     for p, vec in zip(items, vectors):
         payload = p.model_dump()
-        points.append(PointStruct(id=int(p.ID), vector=vec, payload=payload))
+
+        # if vec == None:
+        #     [vec] = await provider.embed([payload.Descripcion])
+
+        points.append(PointStruct(
+            id=int(p.ID),
+            vector=vec,
+            payload=payload))
     upsert_points("user_projects", points)
     return {"upserted": len(points)}
+
+
+# Función auxiliar para subir UserProjects
+# @router.post("/user-project", summary="Sube un user-project")
+# async def upsert_user_project(user_project: UserProject, request: Request):
+#     provider = request.app.state.provider
+#     [embedding] = await provider.embed([user_project.Descripcion])
+#     point = PointStruct(
+#         id=int(user_project.ID),
+#         vector=embedding,
+#         payload={
+#             "ID": user_project.ID,   
+#             "Descripcion": user_project.Descripcion
+#         },
+#     )
+#     upsert_points("user_projects", [point])
+#     return 
+
+# Realiza el match entre un proyecto de usuario subido previamente a Qdrant
+@router.get("/user-projects/{id_project}/matches", summary="Retorna los proyectos históricos más similares al del usuario")
+async def match_user_projects_with_historical_proyects(id_project: int, request: Request):
+    # Buscamos el proyecto en Qdrant
+    rec = client.retrieve(
+        collection_name="user_projects",
+        ids=[id_project],
+        with_vectors=True,
+        with_payload=True
+    )
+
+    if not rec:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado. Procesa el proyecto primero.")
+    
+    # Obtenemos los vectores
+    projectFromQdrant = rec[0]
+    projectVector = projectFromQdrant.vector
+
+    # Realizamos el match semántico
+    hits = search_projects(projectVector)
+
+    # Preparamos el retorno
+    out: List[MatchResult] = []
+    for h in hits:
+        payload = h.payload or {}
+        semantic = float(h.score)
+        affinity = semantic
+        out.append(MatchResult(
+            call_id=int(h.id),
+            name=payload.get("Titulo", "Descripcion"),
+            agency=str(payload.get("Area")) if payload.get("Area") is not None else None,
+            affinity=affinity,
+            semantic_score=semantic,
+            rules_score= 0 ,
+            explanations=[],
+            topic_score=0
+        ))
+    
+    # Ordenamos por afinidad
+    out.sort(key=lambda x: x.affinity, reverse=True)
+    return out
+
+
+
+
+@router.get("/all-user-proyects", summary="Devuelve todos los proyectos de usuario almacenados en Qdrant")
+async def  all_user_proyects():
+    out = search_all_points("user_projects")
+
+    return out
+
+
+    
+
+
+# Sección de pruebas: Funciona solo si el archivo se ejecuta como script
+if __name__ == "__main__":
+    docs = cargar_proyectos_de_backend()
+    for i in docs:
+        print(i)

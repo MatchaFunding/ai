@@ -28,13 +28,19 @@ async def lifespan(app: FastAPI):
     provider = get_embeddings_provider()
     probe = await provider.embed(["_dim_probe"])
     vector_dim = len(probe[0])
-    # Carga los datos en collecciones de Qdrant
+
+    ### Carga los datos en collecciones de Qdrant ###
     print("Cargando colecciones de Qdrant...")
+    # Colección ideas: ideas de los usuarios vectorizadas
     ensure_collection("ideas", vector_dim)
+    # Colección funds: fondos obtenidos del scrapping vectorizados
     ensure_collection("funds", vector_dim)
+    # Tópicos de los fondos
     ensure_collection("funds_topics", NUMBER_OF_TOPICS)
+    # 
     ensure_collection("similar_proyects", vector_dim)
     ensure_collection("user_projects", vector_dim)
+
     # Inicia el modelo de BERTopic y guarda sus propiedades
     print("Iniciando modelo de BERTopic...")
     model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
