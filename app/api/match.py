@@ -5,24 +5,48 @@ from qdrant_client.models import PointStruct, Filter
 from app.services.qdrant_store import *
 import traceback
 
+from app.models.match_result import MatchResult
+from app.models.match_request import MatchRequest
+
 router = APIRouter(prefix="/ia", tags=["ia"])
 
-class MatchRequest(BaseModel):
-    idea_id: int = Field(..., description="ID de la idea ya procesada y guardada en Qdrant")
-    top_k: int = 10
-    estado: Optional[str] = "abierto"
-    regiones: Optional[List[str]] = None
-    tipos_perfil: Optional[List[str]] = None
+# Funcion auxiliar para ponderar los matchs
+def _compute_match_score(topics_match, semantic_match, k:int):
+    # Dado que nada asegura que los matchs coincidan, hay que listarlos
+    semantic_dict = {int(h.id): h for h in semantic_match}
+    topic_dict = {int(h.id): h for h in topics_match}
 
-class MatchResult(BaseModel):
-    call_id: int
-    name: str
-    agency: Optional[str] = None
-    affinity: float
-    semantic_score: float
-    rules_score: float
-    topic_score: float 
-    explanations: List[str] = []
+    # Obtenemos todas las ids: minimo 10, maximo 20
+    all_ids = set(semantic_dict) | set(topic_dict)
+
+    final_match: List[MatchResult] = []
+
+    # Recorremos por ID de los Match
+    for call_id in all_ids:
+        # Obtenemos los scores
+        sem = float(semantic_dict.get(call_id).score) if call_id in semantic_dict else 0.0
+        top = float(topic_dict.get(call_id).score) if call_id in topic_dict else 0.0
+
+        # Obtenemos los datos segun donde vengan
+        payload = (semantic_dict.get(call_id) or topic_dict.get(call_id)).payload or {}
+        #Calculamos la afinidad
+        affinity = 0.3 * sem + 0.7 * top
+        # Agregamos el match a la lista
+        final_match.append(MatchResult(
+        call_id=call_id,
+        name=payload.get("Titulo", "Fondo"),
+        agency=str(payload.get("Financiador")) if payload.get("Financiador") else None,
+        affinity=affinity,
+        semantic_score=sem,
+        rules_score=float(0.0),
+        topic_score=top,
+        explanations=[""]
+    ))
+    # Ordenamos la lista por afinidad
+    final_match.sort(key=lambda x: x.affinity, reverse=True)
+    k = min(k, len(final_match))
+    # Retornamos los k elementos
+    return final_match[:k]
 
 def _rules_score(payload: dict, req: MatchRequest) -> tuple[float, List[str]]:
     score = 1.0
@@ -267,3 +291,70 @@ async def match(req: MatchRequest, request: Request):
         ))
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
+
+# Realiza match entre una idea y los fondos disponibles
+@router.get("/{id}/{k}", summary="Dado un id, retorna los k fondos mas asertivos para la idea")
+async def match_idea_with_funds(id_idea: int, k: int, request: Request):
+    try:
+        print(f"Iniciando match para idea ID: {id_idea}")
+
+        # Recolectamos la idea segun la ID
+        rec = client.retrieve(
+            collection_name="ideas",
+            ids = [id_idea],
+            with_vectors=True,
+            with_payload=True
+        )
+        
+        # Manejo de errores en caso de que no exista la idea
+        if not rec: 
+            print(f"Error: Idea {id_idea} no encontrada en colección 'ideas'")
+            raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
+
+        # Recolectamos la idea, su contenido y su vector semantico
+        user_idea = rec[0]
+        payload = user_idea.payload
+        semantic_vector = user_idea.vector
+        # Extraemos los vectores de los topicos
+        _, probs = request.app.state.topic_model.transform(payload.get('ResumenLLM'))
+        topic_vector = probs[0][1:]
+
+        # Si, por alguna razon no hay vector semantico, lo creamos
+        if not semantic_vector:
+            # Recolectamos el texto con valor semantico
+            text = payload.get("ResumenLLM") or " ".join(filter(None, [
+                payload.get("Campo"), payload.get("Problema"),
+                payload.get("Publico"), payload.get("Innovacion"),
+            ])) or ""
+            text = text.strip()
+
+            # En caso de no tener vector ni texto, no hay match
+            if not text:
+                raise HTTPException(status_code=500, detail="Idea almacenada sin vector ni texto para recomputar.")
+            
+            # Generamos el vector semantico
+            provider = request.app.state.provider
+            [semantic_vector] = await provider.embed([text])
+            # Subimos el vector a la coleccion qdrant
+            upsert_points("ideas", [
+                PointStruct(id=id_idea, vector=semantic_vector, payload=payload)
+            ])
+
+        ########################################
+        ### Implementar filtros mas adelante ###
+        ########################################
+
+        # Realizamos el match por topicos
+        hits_topic = search_topics(topic_vector, top_k=k, must_filter=None)
+        # Realizamos el match semantico
+        hits_semantic = search_funds(semantic_vector, top_k=k, must_filter=None)
+        # Generamos la ponderacion
+        response = _compute_match_score(hits_topic, hits_semantic, k)
+        # Retornamos
+        return response
+
+    # Manejo de errores    
+    except Exception as e:
+        print(f"Error en match endpoint: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
