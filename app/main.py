@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from sentence_transformers import SentenceTransformer
 from bertopic import BERTopic
+import traceback
 
 # Rutas de los controladores para cada servicio
 from app.services.embeddings_factory import get_embeddings_provider
@@ -70,6 +72,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Middleware personalizado para manejar CORS en errores
+@app.middleware("http")
+async def cors_handler(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        print(f"Error en request {request.url}: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        # En caso de error, devolver respuesta con headers CORS
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": f"Internal server error: {str(e)}"}
+        )
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
 
 # Para ver el estado de el servicio
 @app.get("/")
