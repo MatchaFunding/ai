@@ -50,10 +50,10 @@ async def lifespan(app: FastAPI):
     app.state.vector_dim = vector_dim
     app.state.topic_model = topic_model
     # Finalmente poblar con los datos en el BackEnd
-    #print("Cargando proyectos desde el BackEnd...")
-    #await subir_proyectos_del_backend(provider)
-    #print("Cargando instrumentos desde el BackEnd...")
-    #await subir_instrumentos_del_backend(provider)
+    print("Cargando proyectos desde el BackEnd...")
+    await subir_proyectos_del_backend(provider)
+    print("Cargando instrumentos desde el BackEnd...")
+    await subir_instrumentos_del_backend(provider)
     # Listo
     print("Modelos cargados exitosamente!")
     yield
