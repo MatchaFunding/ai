@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
     print("Cargando proyectos desde el BackEnd...")
     await subir_proyectos_del_backend(provider)
     print("Cargando instrumentos desde el BackEnd...")
-    await subir_instrumentos_del_backend(provider)
+    await subir_instrumentos_del_backend(provider, topic_model)
     # Listo
     print("Modelos cargados exitosamente!")
     yield

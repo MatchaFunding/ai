@@ -37,14 +37,21 @@ def cargar_instrumentos_de_backend():
         return None
 
 # Sube y vectoriza los instrumentos vigentes y historicos desde el BackEnd
-async def subir_instrumentos_del_backend(provider):
+async def subir_instrumentos_del_backend(provider, topic_model):
     fondos = cargar_instrumentos_de_backend()
     texts = list(map(_text_of_fund_dict, fondos)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
     lista_topic = []
     points = []
     for f, vec in zip(fondos, vectors):
-        points.append(PointStruct(id=int(f["ID"]), vector=vec, payload=f))
+        payload = f.copy()
+        payload.setdefault("Estado", f['Estado'])
+        _, probs = topic_model.transform(f['Descripcion'])
+        topicos = probs[0][1:]
+        punto = PointStruct(id=int(f["ID"]), vector=topicos, payload=payload)
+        lista_topic.append(punto)
+        points.append(PointStruct(id=int(f["ID"]), vector=vec, payload=payload))
+    upsert_points("funds_topics", lista_topic)
     upsert_points("funds", points)
 
 # Muestra todos los instrumentos vectorizados
