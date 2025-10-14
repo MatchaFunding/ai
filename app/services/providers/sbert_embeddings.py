@@ -2,7 +2,11 @@ import os
 from typing import Sequence, List
 from sentence_transformers import SentenceTransformer
 import anyio
+import torch
 from app.services.embeddings_base import EmbeddingsProvider
+
+# Forzar el uso de CPU para evitar errores de CUDA
+torch.cuda.is_available = lambda: False
 
 # Transforma un String a Booleano equivalente
 def _str2bool(s: str | None, default: bool) -> bool:
@@ -17,7 +21,8 @@ class SBertEmbeddings(EmbeddingsProvider):
 	# Constructor de la clase
     def __init__(self):
         self.model_name = os.getenv("EMBEDDINGS_MODEL", "intfloat/multilingual-e5-base")
-        self.device = os.getenv("EMBEDDINGS_DEVICE", "cpu")
+        # Forzar el uso de CPU para evitar errores de CUDA
+        self.device = "cpu"
         self.normalize = _str2bool(os.getenv("EMBEDDINGS_NORMALIZE", "true"), True)
         self.local_only = _str2bool(os.getenv("HF_LOCAL_ONLY", "false"), False)
 		
