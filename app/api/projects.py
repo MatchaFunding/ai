@@ -106,23 +106,6 @@ async def upsert_proyects_users(items: List[Proyecto], request: Request) -> dict
     upsert_points("user_projects", points)
     return {"upserted": len(points)}
 
-
-# Función auxiliar para subir UserProjects
-# @router.post("/user-project", summary="Sube un user-project")
-# async def upsert_user_project(user_project: UserProject, request: Request):
-#     provider = request.app.state.provider
-#     [embedding] = await provider.embed([user_project.Descripcion])
-#     point = PointStruct(
-#         id=int(user_project.ID),
-#         vector=embedding,
-#         payload={
-#             "ID": user_project.ID,   
-#             "Descripcion": user_project.Descripcion
-#         },
-#     )
-#     upsert_points("user_projects", [point])
-#     return 
-
 # Realiza el match entre un proyecto de usuario subido previamente a Qdrant
 @router.get("/user-projects/{id_project}/matches", summary="Retorna los proyectos históricos más similares al del usuario")
 async def match_user_projects_with_historical_proyects(id_project: int, request: Request):
@@ -133,17 +116,13 @@ async def match_user_projects_with_historical_proyects(id_project: int, request:
         with_vectors=True,
         with_payload=True
     )
-
     if not rec:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado. Procesa el proyecto primero.")
-    
     # Obtenemos los vectores
     projectFromQdrant = rec[0]
     projectVector = projectFromQdrant.vector
-
     # Realizamos el match semántico
     hits = search_projects(projectVector)
-
     # Preparamos el retorno
     out: List[MatchResult] = []
     for h in hits:
@@ -165,18 +144,11 @@ async def match_user_projects_with_historical_proyects(id_project: int, request:
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
-
-
-
 @router.get("/all-user-proyects", summary="Devuelve todos los proyectos de usuario almacenados en Qdrant")
 async def  all_user_proyects():
     out = search_all_points("user_projects")
 
     return out
-
-
-    
-
 
 # Sección de pruebas: Funciona solo si el archivo se ejecuta como script
 if __name__ == "__main__":
