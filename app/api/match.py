@@ -4,7 +4,7 @@ from typing import List, Optional
 from qdrant_client.models import PointStruct, Filter
 from app.services.qdrant_store import *
 import traceback
-
+from app.models.proyecto import Proyecto
 from app.models.match_result import MatchResult
 from app.models.match_request import MatchRequest
 
@@ -284,6 +284,93 @@ async def match_idea_with_funds(id_idea: int, k: int, request: Request):
             [semantic_vector] = await provider.embed([text])
             # Subimos el vector a la coleccion qdrant
             upsert_points("ideas", [
+                PointStruct(id=id_idea, vector=semantic_vector, payload=payload)
+            ])
+
+        ########################################
+        ### Implementar filtros mas adelante ###
+        ########################################
+
+        # Realizamos el match por topicos
+        hits_topic = search_topics(topic_vector, top_k=k, must_filter=None)
+        # Realizamos el match semantico
+        hits_semantic = search_funds(semantic_vector, top_k=k, must_filter=None)
+        # Generamos la ponderacion
+        response = _compute_match_score(hits_topic, hits_semantic, k)
+        # Retornamos
+        return response
+
+    # Manejo de errores    
+    except Exception as e:
+        print(f"Error en match endpoint: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+# Realiza match entre un proyecto y los fondos disponibles
+
+
+# Textualiza los proyectos para vectorizarlos
+def _text_of_proyect(p: Proyecto) -> str:
+    return ". ".join(filter(None, [
+        p.Titulo, p.Descripcion, p.Alcance, p.Area
+    ]))
+
+# Textualiza los proyectos en formato de diccionario
+def _text_of_proyect_dict(p: dict) -> str:
+    return ". ".join(filter(None, [
+        p["Titulo"], p["Descripcion"], p["Alcance"], p["Area"]
+    ]))
+
+
+@router.get("/funds/{id}/{k}", summary="Dado un id, retorna los k fondos mas asertivos para el proyecto")
+async def match_idea_with_funds(id_idea: int, k: int, request: Request):
+    try:
+        print(f"Iniciando match para idea ID: {id_idea}")
+
+        # Recolectamos la idea segun la ID
+        rec = client.retrieve(
+            collection_name="user_projects",
+            ids = [id_idea],
+            with_vectors=True,
+            with_payload=True
+        )
+        user_idea = rec[0]
+        payload = user_idea.payload
+        
+        p = {}
+        p["Titulo"] = payload.get('Titulo')
+        p["Descripcion"] = payload.get('Descripcion')
+        p["Area"] = payload.get('Area')
+        p["Alcance"] = payload.get('Alcance')
+        stringtext = _text_of_proyect_dict(p)
+        # Manejo de errores en caso de que no exista la idea
+        if not rec: 
+            print(f"Error: Idea {id_idea} no encontrada en colección 'user_projects'")
+            raise HTTPException(status_code=404, detail="Idea no encontrada. Procesa la idea primero.")
+
+        # Recolectamos la idea, su contenido y su vector semantico
+        user_idea = rec[0]
+        payload = user_idea.payload
+        semantic_vector = user_idea.vector
+        # Extraemos los vectores de los topicos
+        _, probs = request.app.state.topic_model.transform(stringtext)
+        topic_vector = probs[0][1:]
+
+        # Si, por alguna razon no hay vector semantico, lo creamos
+        if not semantic_vector:
+            # Recolectamos el texto con valor semantico
+            text = payload.get("Descripcion") or ""
+            text = text.strip()
+
+            # En caso de no tener vector ni texto, no hay match
+            if not text:
+                raise HTTPException(status_code=500, detail="Idea almacenada sin vector ni texto para recomputar.")
+            
+            # Generamos el vector semantico
+            provider = request.app.state.provider
+            [semantic_vector] = await provider.embed([text])
+            # Subimos el vector a la coleccion qdrant
+            upsert_points("user_projects", [
                 PointStruct(id=id_idea, vector=semantic_vector, payload=payload)
             ])
 
