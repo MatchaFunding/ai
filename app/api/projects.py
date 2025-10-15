@@ -47,7 +47,7 @@ async def subir_proyectos_de_core(provider):
     points = []
     for p, vec in zip(proyectos, vectors):
         points.append(PointStruct(id=int(p["ID"]), vector=vec, payload=p))
-    upsert_points("similar_proyects", points)
+    upsert_points("similar_projects", points)
 
 # Carga proyectos historicos desde el BackEnd
 def cargar_proyectos_de_backend():
@@ -82,12 +82,12 @@ async def upsert_one_proyect(item: Proyecto, request: Request) -> dict:
     for p, vec in zip(items, vectors):
         payload = p.model_dump()
         points.append(PointStruct(id=int(p.ID), vector=vec, payload=payload))
-    upsert_points("similar_proyects", points)
+    upsert_points("similar_projects", points)
     return {"upserted": len(points)}
 
 # Sube y vectoriza multiples proyectos subidos por el usuario
 @router.post("/upsert", summary="Agregar e indexar mutiples proyectos")
-async def upsert_proyects(items: List[Proyecto], request: Request) -> dict:
+async def upsert_projects(items: List[Proyecto], request: Request) -> dict:
     provider = request.app.state.provider
     texts = list(map(_text_of_proyect, items)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
@@ -96,19 +96,19 @@ async def upsert_proyects(items: List[Proyecto], request: Request) -> dict:
     for p, vec in zip(items, vectors):
         payload = p.model_dump()
         points.append(PointStruct(id=int(p.ID), vector=vec, payload=payload))
-    upsert_points("similar_proyects", points)
+    upsert_points("similar_projects", points)
     return {"upserted": len(points)}
 
 # Muestra todos los proyectos vectorizados
 @router.get("/all", summary="Obtener todos los proyectos indexados")
-async def get_all_proyects(request: Request) -> dict:
-    results, next_page = search_all_points("similar_proyects")
+async def get_all_projects(request: Request) -> dict:
+    results, next_page = search_all_points("similar_projects")
     proyectos = [item.payload for item in results]
     return {"projects": proyectos}
 
 # Sube y vectoriza multiples proyectos subidos por el usuario
 @router.post("/upsertusers", summary="Indexar/actualizar proyectos (batch)")
-async def upsert_proyects_users(items: List[Proyecto], request: Request) -> dict:
+async def upsert_projects_users(items: List[Proyecto], request: Request) -> dict:
     provider = request.app.state.provider
     texts = list(map(_text_of_proyect, items)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
@@ -129,7 +129,7 @@ async def upsert_proyects_users(items: List[Proyecto], request: Request) -> dict
 
 # Realiza el match entre un proyecto de usuario subido previamente a Qdrant
 @router.get("/user-projects/{id_project}/matches", summary="Retorna los proyectos históricos más similares al del usuario")
-async def match_user_projects_with_historical_proyects(id_project: int, request: Request):
+async def match_user_projects_with_historical_projects(id_project: int, request: Request):
     # Buscamos el proyecto en Qdrant
     rec = client.retrieve(
         collection_name="user_projects",
@@ -165,8 +165,8 @@ async def match_user_projects_with_historical_proyects(id_project: int, request:
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
-@router.get("/all-user-proyects", summary="Obtener todos los proyectos de usuarioes indexados")
-async def get_all_proyects(request: Request) -> dict:
+@router.get("/all-user-projects", summary="Obtener todos los proyectos de usuarioes indexados")
+async def get_all_projects(request: Request) -> dict:
     results, next_page = search_all_points("user_projects")
     proyectos = [item.payload for item in results]
     return {"user_projects": proyectos}

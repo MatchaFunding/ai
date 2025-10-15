@@ -62,7 +62,7 @@ def search_projects(
     must_filter: Filter | None = None
 ):
     return client.search(
-        collection_name="similar_proyects",
+        collection_name="similar_projects",
         query_vector=query_vector,
         limit=top_k,
         query_filter=must_filter

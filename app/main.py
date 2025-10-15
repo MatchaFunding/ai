@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     ensure_collection("funds", vector_dim)
     # Tópicos de los fondos
     ensure_collection("funds_topics", NUMBER_OF_TOPICS)
-    ensure_collection("similar_proyects", vector_dim)
+    ensure_collection("similar_projects", vector_dim)
     ensure_collection("user_projects", vector_dim)
     # Inicia el modelo de BERTopic y guarda sus propiedades
     print("Iniciando modelo de BERTopic...")
