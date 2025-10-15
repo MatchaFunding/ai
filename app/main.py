@@ -18,6 +18,7 @@ from app.api import projects
 
 from app.api.projects import subir_proyectos_del_backend
 from app.api.funds import subir_instrumentos_del_backend
+from app.api.ideas import subir_ideas_del_backend
 
 # Prefijo de la ruta para acceder a la API
 API_PREFIX = "/api/v1"
@@ -50,10 +51,12 @@ async def lifespan(app: FastAPI):
     app.state.vector_dim = vector_dim
     app.state.topic_model = topic_model
     # Finalmente poblar con los datos en el BackEnd
-    print("Cargando proyectos desde el BackEnd...")
-    await subir_proyectos_del_backend(provider)
+    print("Cargando ideas de usuarios desde el BackEnd...")
+    await subir_ideas_del_backend(provider)
     print("Cargando instrumentos desde el BackEnd...")
     await subir_instrumentos_del_backend(provider, topic_model)
+    print("Cargando proyectos desde el BackEnd...")
+    await subir_proyectos_del_backend(provider)
     # Listo
     print("Modelos cargados exitosamente!")
     yield

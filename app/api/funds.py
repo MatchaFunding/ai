@@ -28,7 +28,7 @@ def _text_of_fund_dict(p: dict) -> str:
 
 # Carga instrumentos vigentes y historicos desde el BackEnd
 def cargar_instrumentos_de_backend():
-    url = 'https://core.matchafunding.com/vertodoslosinstrumentos/'
+    url = 'https://backend.matchafunding.com/vertodoslosinstrumentos/'
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
@@ -57,7 +57,7 @@ async def subir_instrumentos_del_backend(provider, topic_model):
 # Muestra todos los instrumentos vectorizados
 @router.get("/all", summary="Obtener todos los instrumentos indexados")
 async def get_all_funds(request: Request) -> dict:
-    results, next_page = search_all_points("funds")
+    results, _ = search_all_points("funds")
     fondos = [item.payload for item in results]
     return {"funds": fondos}
 

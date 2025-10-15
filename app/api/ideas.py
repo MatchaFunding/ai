@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
+import requests
 
 from app.models.idea import Idea
 from app.models.instrumento import Instrumento
 from app.models.idea_refinada import IdeaRefinada
 from app.services.qdrant_store import upsert_points
+from app.services.qdrant_store import search_all_points
 from app.utils.llm_ollama import llm_generate
 
 router = APIRouter(prefix="/ideas", tags=["ideas"])
@@ -24,6 +26,42 @@ Sigue las siguientes instrucciones
 3. Si tienes información disponible de los procesos de la CORFO y ANID usalos para construir el parrafo más adecuadamente.
 4. No digas explicitamente "factor diferenciador", usa modos del habla distintos como "de distingue las alternativas del mercado haciendo---" tampoco menciones directamente a CORFO y ANID
 """.strip()
+
+# Carga las ideas de los usuarios desde el BackEnd
+def cargar_ideas_de_backend():
+    url = 'https://backend.matchafunding.com/vertodaslasideas/'
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        return None
+
+# Sube y vectoriza las ideas de usuarios desde el BackEnd
+async def subir_ideas_del_backend(provider):
+    ideas = cargar_ideas_de_backend()
+    puntos = []
+    for i in range(len(ideas)):
+        ideas[i]["ResumenLLM"] = ideas[i].pop("Propuesta")
+    for idea in ideas:
+        paragraph = f"{idea["Campo"]}. {idea["Problema"]}. {idea["Publico"]}. {idea["Innovacion"]}."
+        [embedding] = await provider.embed([paragraph])
+        punto = PointStruct(
+            id=int(idea["ID"]),
+            vector=embedding,
+            payload={
+                "ID": idea["ID"],
+                "Usuario": idea["Usuario"],
+                "Campo": idea["Campo"],
+                "Problema": idea["Problema"],
+                "Publico": idea["Publico"],
+                "Innovacion": idea["Innovacion"],
+                "ResumenLLM": idea["ResumenLLM"],
+            },
+        )
+        puntos.append(punto)
+    upsert_points("ideas", puntos)
+
 
 # Crea una idea para un proyecto usando Ollama, la vectoriza y la guarda en Qdrant
 @router.post("/", response_model=IdeaRefinada, summary="Crea la idea, la refina con LLM, vectoriza y guarda")
@@ -53,11 +91,18 @@ async def create_idea(idea: Idea, request: Request) -> IdeaRefinada:
             "Problema": idea.Problema,
             "Publico": idea.Publico,
             "Innovacion": idea.Innovacion,
-            "ResumenLLM": paragraph,   
+            "ResumenLLM": paragraph,
         },
     )
     upsert_points("ideas", [point])
     return IdeaRefinada(ID=idea.ID, Usuario=idea.Usuario, ResumenLLM=paragraph)
+
+# Muestra todas las ideas de usuarios vectorizados
+@router.get("/all", summary="Obtener todas las ideas indexadas")
+async def get_all_ideas(request: Request) -> dict:
+    results, _ = search_all_points("ideas")
+    ideas = [item.payload for item in results]
+    return {"ideas": ideas}
 
 # Carga las etiquetas un instrumentos
 def carga_labels_instrumento(instrumento: Instrumento, topicos: list):
