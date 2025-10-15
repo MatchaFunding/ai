@@ -6,3 +6,7 @@ qdrant_storage
 ./qdrant_storage
 qdrant_storage;C
 ./qdrant_storage;C
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
