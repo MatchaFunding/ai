@@ -151,19 +151,22 @@ async def check_collections():
     try:
         ideas_scroll = client.scroll("ideas", limit=1000)
         ideas_count = len(ideas_scroll[0])
-        
         funds_scroll = client.scroll("funds", limit=1000)
         funds_count = len(funds_scroll[0])
-        
         funds_topics_scroll = client.scroll("funds_topics", limit=1000)
         funds_topics_count = len(funds_topics_scroll[0])
-        
+        similar_projects_scroll = client.scroll("similar_projects", limit=1000)
+        similar_projects_count = len(similar_projects_scroll[0])
+        user_projects_scroll = client.scroll("user_projects", limit=1000)
+        user_projects_count = len(user_projects_scroll[0])
         return {
             "status": "ok",
             "collections": {
                 "ideas": ideas_count,
                 "funds": funds_count,
-                "funds_topics": funds_topics_count
+                "funds_topics": funds_topics_count,
+                "similar_projects": similar_projects_count,
+                "user_projects": user_projects_count
             }
         }
     except Exception as e:
@@ -173,7 +176,9 @@ async def check_collections():
             "collections": {
                 "ideas": "unknown",
                 "funds": "unknown", 
-                "funds_topics": "unknown"
+                "funds_topics": "unknown",
+                "similar_projects": "unknown",
+                "user_projects": "unknown"
             }
         }
 
