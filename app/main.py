@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     ensure_collection("user_projects", vector_dim)
     # Inicia el modelo de BERTopic y guarda sus propiedades
     print("Iniciando modelo de BERTopic...")
-    model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True)
+    model = SentenceTransformer("jinaai/jina-embeddings-v2-base-es", trust_remote_code=True, device="cpu")
     topic_model = BERTopic.load("ayuda", embedding_model = model)
     # Guarda en memoria los servicios y modelos compartidos
     print("Estableciento estados...")
