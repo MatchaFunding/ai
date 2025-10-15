@@ -29,6 +29,27 @@ def _text_of_proyect_dict(p: dict) -> str:
     ]))
 
 # Carga proyectos historicos desde el BackEnd
+def cargar_proyectos_de_core():
+    url = 'https://core.matchafunding.com/proyectos'
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        return None
+
+# Sube y vectoriza los proyectos del BackEnd
+async def subir_proyectos_de_core(provider):
+    proyectos = cargar_proyectos_de_core()
+    texts = list(map(_text_of_proyect_dict, proyectos)) # Optimizar funcion con map()
+    vectors = await provider.embed(texts)
+    lista_topic = []
+    points = []
+    for p, vec in zip(proyectos, vectors):
+        points.append(PointStruct(id=int(p["ID"]), vector=vec, payload=p))
+    upsert_points("similar_proyects", points)
+
+# Carga proyectos historicos desde el BackEnd
 def cargar_proyectos_de_backend():
     url = 'https://backend.matchafunding.com/vertodoslosproyectos/'
     response = requests.get(url)
@@ -47,7 +68,7 @@ async def subir_proyectos_del_backend(provider):
     points = []
     for p, vec in zip(proyectos, vectors):
         points.append(PointStruct(id=int(p["ID"]), vector=vec, payload=p))
-    upsert_points("similar_proyects", points)
+    upsert_points("user_projects", points)
 
 # Sube y vectoriza el proyecto subido por el usuario
 @router.post("", summary="Agregar e indexar un solo proyecto")
@@ -81,7 +102,7 @@ async def upsert_proyects(items: List[Proyecto], request: Request) -> dict:
 # Muestra todos los proyectos vectorizados
 @router.get("/all", summary="Obtener todos los proyectos indexados")
 async def get_all_proyects(request: Request) -> dict:
-    results, next_page = search_all_points("similar_proyects")    
+    results, next_page = search_all_points("similar_proyects")
     proyectos = [item.payload for item in results]
     return {"projects": proyectos}
 
@@ -144,11 +165,11 @@ async def match_user_projects_with_historical_proyects(id_project: int, request:
     out.sort(key=lambda x: x.affinity, reverse=True)
     return out
 
-@router.get("/all-user-proyects", summary="Devuelve todos los proyectos de usuario almacenados en Qdrant")
-async def  all_user_proyects():
-    out = search_all_points("user_projects")
-
-    return out
+@router.get("/all-user-proyects", summary="Obtener todos los proyectos de usuarioes indexados")
+async def get_all_proyects(request: Request) -> dict:
+    results, next_page = search_all_points("user_projects")
+    proyectos = [item.payload for item in results]
+    return {"user_projects": proyectos}
 
 # Sección de pruebas: Funciona solo si el archivo se ejecuta como script
 if __name__ == "__main__":

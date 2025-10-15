@@ -17,7 +17,8 @@ from app.api import match
 from app.api import projects
 
 from app.api.projects import subir_proyectos_del_backend
-from app.api.funds import subir_instrumentos_del_backend
+from app.api.projects import subir_proyectos_de_core
+from app.api.funds import subir_instrumentos_de_core
 from app.api.ideas import subir_ideas_del_backend
 
 # Prefijo de la ruta para acceder a la API
@@ -54,9 +55,10 @@ async def lifespan(app: FastAPI):
     print("Cargando ideas de usuarios desde el BackEnd...")
     await subir_ideas_del_backend(provider)
     print("Cargando instrumentos desde el BackEnd...")
-    await subir_instrumentos_del_backend(provider, topic_model)
+    await subir_instrumentos_de_core(provider, topic_model)
     print("Cargando proyectos desde el BackEnd...")
     await subir_proyectos_del_backend(provider)
+    await subir_proyectos_de_core(provider)
     # Listo
     print("Modelos cargados exitosamente!")
     yield
