@@ -28,7 +28,7 @@ def _text_of_fund_dict(p: dict) -> str:
 
 # Carga instrumentos vigentes y historicos desde el BackEnd
 def cargar_instrumentos_de_core():
-    url = 'https://core.matchafunding.com/instrumentos'
+    url = 'https://backend.matchafunding.com/vertodoslosinstrumentos'
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
