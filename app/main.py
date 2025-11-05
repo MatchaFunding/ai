@@ -16,6 +16,8 @@ from app.api import funds
 from app.api import match
 from app.api import projects
 from app.api import rag
+from app.api import premiumproject
+
 
 from app.api.projects import subir_proyectos_del_backend
 from app.api.projects import subir_proyectos_de_core
@@ -117,3 +119,4 @@ app.include_router(funds.router, prefix=API_PREFIX)
 app.include_router(match.router, prefix=API_PREFIX)
 app.include_router(ia.router, prefix=API_PREFIX)
 app.include_router(rag.router, prefix=API_PREFIX)
+app.include_router(premiumproject.router, prefix=API_PREFIX)
