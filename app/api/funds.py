@@ -26,19 +26,11 @@ def _text_of_fund_dict(p: dict) -> str:
         p["TipoDePerfil"]
     ]))
 
-# Carga instrumentos vigentes y historicos desde el BackEnd
-def cargar_instrumentos_de_core():
-    url = 'https://backend.matchafunding.com/vertodoslosinstrumentos'
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        return None
-
 # Sube y vectoriza los instrumentos vigentes y historicos desde el BackEnd
 async def subir_instrumentos_de_core(provider, topic_model):
-    fondos = cargar_instrumentos_de_core()
+    fondos = []
+    with open('instrumentos.json') as json_data:
+        fondos = json.load(json_data)
     texts = list(map(_text_of_fund_dict, fondos)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
     lista_topic = []

@@ -28,19 +28,11 @@ def _text_of_proyect_dict(p: dict) -> str:
         p["Titulo"], p["Descripcion"], p["Alcance"], p["Area"]
     ]))
 
-# Carga proyectos historicos desde el BackEnd
-def cargar_proyectos_de_core():
-    url = 'https://backend.matchafunding.com/vertodoslosproyectos'
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        return None
-
 # Sube y vectoriza los proyectos del BackEnd
 async def subir_proyectos_de_core(provider):
-    proyectos = cargar_proyectos_de_core()
+    proyectos = []
+    with open('proyectos.json') as json_data:
+        proyectos = json.load(json_data)
     texts = list(map(_text_of_proyect_dict, proyectos)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
     lista_topic = []
@@ -49,19 +41,11 @@ async def subir_proyectos_de_core(provider):
         points.append(PointStruct(id=int(p["ID"]), vector=vec, payload=p))
     upsert_points("similar_projects", points)
 
-# Carga proyectos historicos desde el BackEnd
-def cargar_proyectos_de_backend():
-    url = 'https://backend.matchafunding.com/vertodoslosproyectos/'
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        return None
-
 # Sube y vectoriza los proyectos del BackEnd
 async def subir_proyectos_del_backend(provider):
-    proyectos = cargar_proyectos_de_backend()
+    proyectos = []
+    with open('proyectos.json') as json_data:
+        proyectos = json.load(json_data)
     texts = list(map(_text_of_proyect_dict, proyectos)) # Optimizar funcion con map()
     vectors = await provider.embed(texts)
     lista_topic = []

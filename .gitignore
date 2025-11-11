@@ -10,3 +10,6 @@ qdrant_storage;C
 __pycache__/
 *.py[cod]
 *$py.class
+ideas.json
+proyectos.json
+instrumentos.json

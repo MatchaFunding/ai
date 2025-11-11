@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from qdrant_client.models import PointStruct
 import requests
+import json
 
 from app.models.idea import Idea
 from app.models.instrumento import Instrumento
@@ -27,19 +28,11 @@ Sigue las siguientes instrucciones
 4. No digas explicitamente "factor diferenciador", usa modos del habla distintos como "de distingue las alternativas del mercado haciendo---" tampoco menciones directamente a CORFO y ANID
 """.strip()
 
-# Carga las ideas de los usuarios desde el BackEnd
-def cargar_ideas_de_backend():
-    url = 'https://backend.matchafunding.com/vertodaslasideas/'
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        return None
-
 # Sube y vectoriza las ideas de usuarios desde el BackEnd
 async def subir_ideas_del_backend(provider):
-    ideas = cargar_ideas_de_backend()
+    ideas = []
+    with open('ideas.json') as json_data:
+        ideas = json.load(json_data)
     puntos = []
     for i in range(len(ideas)):
         ideas[i]["ResumenLLM"] = ideas[i].pop("Propuesta")
