@@ -3,6 +3,8 @@ from typing import List
 from qdrant_client.models import PointStruct
 import requests
 import traceback
+import json
+
 from app.models.instrumento import Instrumento
 from app.services.qdrant_store import upsert_points
 from app.services.qdrant_store import search_all_points

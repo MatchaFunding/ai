@@ -5,6 +5,7 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from qdrant_client.models import PointStruct
 import requests
+import json
 
 from app.models.proyecto import Proyecto
 from app.models.user_project import UserProject
